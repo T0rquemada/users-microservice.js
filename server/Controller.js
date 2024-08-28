@@ -69,38 +69,28 @@ class UserController {
 
             return res.status(201).json({ message: "User created succesfully!", token: token || null });
         } catch (err) {
-            return res.status(400).json({ message: "Error registering user" });
+            return res.status(400).json({ message: "Error registering user: ", err });
         }
     }
 
-    // // Login depending on JWT
-    // async loginJWT(req, res) {
-    //     const token = req.headers['authorization'];
+    // Login depending on JWT
+    async loginJWT(req, res) {
+        const token = req.headers['authorization'].split(' ')[1];
 
-    //     if (!token) {
-    //         return res.status(401).json({ success: false, message: 'No token provided' });
-    //     }
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'No token provided' });
+        }
 
-    //     try {
-    //         const decoded = jwt.verify(token.split(' ')[1], jwt_secret);
-    //         const userModel = new User();
+        try {
+            const decoded = parseJWT(token)
 
-    //         try {
-    //             const result = userModel;
-    //         } catch (err) {
-    //             return res.status(500).json({ error_message: err });
-    //         }
-
-    //         userModel.findById(decoded.user_id, (err, user) => {
-    //             if (err) return res.status(500).json({ success: false, message: 'Internal server error' });
-    //             if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    //             return res.status(200).json({ success: true, user });
-    //         });
-    //     } catch (error) {
-    //         console.error('Token verification failed:', error);
-    //         return res.status(401).json({ success: false, message: 'Invalid token' });
-    //     }
-    // }
+            let result = await db.findById(User, decoded.user_id);
+            return res.status(200).json({ success: true, user: { username: result.username, email: result.email } });
+        } catch (error) {
+            console.error('Token verification failed:', error);
+            return res.status(401).json({ success: false, message: 'Invalid token' });
+        }
+    }
 
     async login(req, res) {
         let {email, password} = req.body;
@@ -122,7 +112,7 @@ class UserController {
     }
 
     async delete(req, res) {
-        const token = req.headers['authorization'].SPLIT(' ')[1];
+        const token = req.headers['authorization'].split(' ')[1];
 
         if (!token) {
             return res.status(400).json({ message: "User id is required!" });
