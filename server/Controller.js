@@ -60,14 +60,10 @@ class UserController {
         const hashed_pass = await bcrypt.hash(password, 10);
 
         try {
-            let userId;
-            let token;
-
-            if (process.env.NODE_ENV !== 'test') {
-                const createdUser = await db.create(User, { username: username, email: email, password: hashed_pass });
-                userId = createdUser._id;
-                token = generateJWT({ user_id: userId, email: email, password: hashed_pass });
-            }
+            const createdUser = await db.create(User, { username: username, email: email, password: hashed_pass });
+            
+            let userId = createdUser._id;
+            let token = generateJWT({ user_id: userId, email: email, password: password });
 
             return res.status(201).json({ message: "User created succesfully!", token: token || null });
         } catch (err) {
@@ -77,20 +73,44 @@ class UserController {
 
     // Login depending on JWT
     async loginJWT(req, res) {
-        const token = req.headers['authorization'].split(' ')[1];
+        const authHeader = req.headers['authorization'];
 
-        if (!token) {
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ success: false, message: 'No token provided' });
         }
+    
+        const token = authHeader.split(' ')[1];
 
         try {
-            const decoded = parseJWT(token)
+            const decoded = parseJWT(token);
+
+            if (!decoded.user_id) {
+                return res.status(400).json({ success: false, message: 'Invalid token: user_id not provided' });
+            }
+
+            if (!decoded.password || !decoded.email) {
+                return res.status(400).json({ success: false, message: 'Invalid token: email or password not provided' });
+            }
 
             let result = await db.findById(User, decoded.user_id);
-            return res.status(200).json({ success: true, user: { username: result.username, email: result.email } });
-        } catch (error) {
-            console.error('Token verification failed:', error);
-            return res.status(401).json({ success: false, message: 'Invalid token' });
+
+            if (!result) {
+                return res.status(400).json({ success: false, message: 'User not found!' });
+            }
+
+            if (result.email !== decoded.email) {
+                return res.status(401).json({ success: false, message: 'Email does not match' });
+            }
+
+            let isMatch = await bcrypt.compare(decoded.password, result.password);
+            if (!isMatch) {
+                return res.status(401).json({ success: false, message: 'Password does not match' });
+            }
+
+            return res.status(200).json({ success: true, message: 'Login successful' });
+        } catch (err) {
+            console.error('Token verification failed: ', err);
+            return res.status(401).json({ success: false, message: `Token verification failed: ${err.message}` });
         }
     }
 
