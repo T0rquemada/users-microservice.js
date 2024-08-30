@@ -10,9 +10,11 @@ dotenv.config();
 const jwtSecret = process.env.JWT;
 const jwtExpire = process.env.JWT_EXPIRE
 
-function generateJWT(user_id) {
-    const user = { user_id: user_id };
-    return jwt.sign(user, jwtSecret, { expiresIn: jwtExpire });
+function generateJWT(user) {
+    let { user_id, email, password } = user;
+
+    const userInToken = { user_id: user_id, email: email, password: password };
+    return jwt.sign(userInToken, jwtSecret, { expiresIn: jwtExpire });
 }
 
 function parseJWT(token) {
@@ -64,7 +66,7 @@ class UserController {
             if (process.env.NODE_ENV !== 'test') {
                 const createdUser = await db.create(User, { username: username, email: email, password: hashed_pass });
                 userId = createdUser._id;
-                token = generateJWT(userId);
+                token = generateJWT({ user_id: userId, email: email, password: hashed_pass });
             }
 
             return res.status(201).json({ message: "User created succesfully!", token: token || null });
@@ -115,7 +117,7 @@ class UserController {
         const token = req.headers['authorization'].split(' ')[1];
 
         if (!token) {
-            return res.status(400).json({ message: "User id is required!" });
+            return res.status(400).json({ message: "JWT is required!" });
         }
 
         try {
