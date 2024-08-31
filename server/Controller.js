@@ -8,10 +8,12 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const jwtSecret = process.env.JWT;
-const jwtExpire = process.env.JWT_EXPIRE
+const jwtExpire = process.env.JWT_EXPIRE;
 
 function generateJWT(user) {
     let { user_id, email, password } = user;
+
+    console.log('Generating token for user_id:', user_id);
 
     const userInToken = { user_id: user_id, email: email, password: password };
     return jwt.sign(userInToken, jwtSecret, { expiresIn: jwtExpire });
@@ -36,26 +38,18 @@ class UserController {
     async create(req, res) {
         let {username, email, password} = req.body;
 
-        if (!username) {
-            return res.status(400).json({ message: "Username is required!" });
-        }
-        
-        if (!email) {
-            return res.status(400).json({ message: "Email is required!" });
-        }
-        
-        if (!password) {
-            return res.status(400).json({ message: "Password is required!" });
-        }
+        if (!username) return res.status(400).json({ message: "Username is required!" });
+        if (!email) return res.status(400).json({ message: "Email is required!" });
+        if (!password) return res.status(400).json({ message: "Password is required!" });
 
         // Check userdata for containing spaces
-        //if (email.includes(' ')) return { code: 400, response: { message: "Email can't contain spaces!" } };
-        //if (password.includes(' ')) return { code: 400, response: { message: "Password can't contain spaces!" } };
-        //if (username.includes(' ')) return { code: 400, response: { message: "Username can't contain spaces!" } };
+        if (email.includes(' ')) return { code: 400, response: { message: "Email can't contain spaces!" } };
+        if (password.includes(' ')) return { code: 400, response: { message: "Password can't contain spaces!" } };
+        if (username.includes(' ')) return { code: 400, response: { message: "Username can't contain spaces!" } };
 
-        // if (username.length <= 3) return res.status(400).json({message: "Username can't be shorter than 3 characters!"});
-        // if (password.length <= 8) return res.status(400).json({message: "Password can't be shorter than 8 characters!"});
-        // if (!email.includes('@')) return res.status(400).json({message: "Email should contain '@'!"});
+        if (username.length <= 3) return res.status(400).json({message: "Username can't be shorter than 3 characters!"});
+        if (password.length <= 8) return res.status(400).json({message: "Password can't be shorter than 8 characters!"});
+        if (!email.includes('@')) return res.status(400).json({message: "Email should contain '@'!"});
 
         const hashed_pass = await bcrypt.hash(password, 10);
 
@@ -63,10 +57,12 @@ class UserController {
             const createdUser = await db.create(User, { username: username, email: email, password: hashed_pass });
             
             let userId = createdUser._id;
+            console.error('user_id2: ', userId);
             let token = generateJWT({ user_id: userId, email: email, password: password });
 
             return res.status(201).json({ message: "User created succesfully!", token: token || null });
         } catch (err) {
+            console.error('Error registering user: ', err);
             return res.status(400).json({ message: "Error registering user: ", err });
         }
     }
@@ -133,6 +129,7 @@ class UserController {
             let token = generateJWT({ user_id: user._id, email: email, password: password});
             return res.status(200).json({ success: true, message: "Logged succesfully!", token: token });
         } catch (err) {
+            console.error('Error while login: ', err);
             return res.status(500).json({ success: false, message: err.message });
         }
     }
@@ -165,29 +162,27 @@ class UserController {
 
         if (!new_username) return res.status(400).json({ success: false, message: 'No new username provided!' });
 
-        const authHeader = req.headers['authorization'];
+        try {
+            await db.updateUsername(User, req.user._id, new_username);
+            return res.status(200).json({ success: true, message: 'Username updated successfully!' });
+        } catch (err) {
+            console.error('Error updating username: ', err);
+            return res.status(500).json({ success: false, error_message: err });
+        }
+    }
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ success: false, message: 'No token provided!' });
-    
-        const token = authHeader.split(' ')[1];
+    async updateEmail(req, res) {
+        const new_email = req.body.new_email;
+
+        if (!new_email) return res.status(400).json({ success: false, message: 'No new email provided!' });
+        if (!new_email.includes('@')) return res.status(400).json({ success: false, message: "Email should contain '@'!"});
 
         try {
-            const decoded = parseJWT(token);
-
-            if (!decoded.user_id) return res.status(400).json({ success: false, message: 'Invalid token: user_id not provided' });
-            if (!decoded.password) return res.status(400).json({ success: false, message: 'Invalid userdata: password not provided' });
-
-            let result = await db.findById(User, decoded.user_id);
-            if (!result) return res.status(400).json({ success: false, message: 'User not found!' });
-
-            let isMatch = await bcrypt.compare(decoded.password, result.password);
-            if (!isMatch) return res.status(401).json({ success: false, message: 'Password does not match' });
-
-            await db.updateUsername(User, decoded.user_id, new_username);
-
-            return res.status(200).json({ success: true, message: 'Username updated successful!' });
+            await db.updateEmail(User, req.user._id, new_email);
+            return res.status(200).json({ success: true, message: 'Email updated successfully!' });
         } catch (err) {
-            return res.status(500).json({ error_message: err });
+            console.error('Error updating email: ', err);
+            return res.status(500).json({ success: false, error_message: err });
         }
     }
 }

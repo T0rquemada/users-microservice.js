@@ -60,6 +60,20 @@ class Database {
     }
   }
 
+  async updateEmail(Model, id, newEmail) {
+    try {
+      const result = await Model.findByIdAndUpdate(
+        id,
+        { email: newEmail }, 
+        { new: true } 
+      );
+      return result;
+    } catch (err) {
+      console.error('updateEmail operation failed:', err);
+      throw err;
+    }
+  }
+
   async delete(Model, id) {
     try {
       const result = await Model.findByIdAndDelete(id);
