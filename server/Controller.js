@@ -115,21 +115,25 @@ class UserController {
     }
 
     async login(req, res) {
-        let {email, password} = req.body;
+        let { email, password } = req.body;
 
-        if (!email) {
-            return res.status(400).json({ message: "Email is required!" });
-        }
-        
-        if (!password) {
-            return res.status(400).json({ message: "Password is required!" });
-        }
+        if (!email) return res.status(400).json({ success: false, message: "Email is required!" });
+        if (!password) return res.status(400).json({ success: false, message: "Password is required!" });
 
         try {
-            // let token = generateJWT(result.user_id);
-            return res.status(200).json({ message: "Logged succesfully!" });
+            const user = await db.find(User, { email: email });
+
+            if (!user) return res.status(401).json({ success: false, message: 'User not found' });
+
+            let isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) {
+                return res.status(401).json({ success: false, message: 'Password does not match' });
+            }
+
+            let token = generateJWT({ user_id: user._id, email: email, password: password});
+            return res.status(200).json({ success: true, message: "Logged succesfully!", token: token });
         } catch (err) {
-            return res.status(500).json({ message: err });
+            return res.status(500).json({ success: false, message: err.message });
         }
     }
 
@@ -147,28 +151,28 @@ class UserController {
             let userId = decodedToken.user_id;
             if (!userId) return res.status(500).json({ message: "User id from JWT not found" });
 
-            const deletedUser = await db.delete(User, userId);
+            await db.delete(User, userId);
 
-            return res.status(200).json(deletedUser);
+            return res.status(200).json({ message: "User deleted!" });
         } catch (err) {
             console.error('Error while deleting user:', err);
             return res.status(500).json({ message: err });
         }
       }
 
-    // async update(req, res) {
-    //     if (!req.body.username) return res.status(400).json({ message: 'Username is required' });
+    async updateUsername(req, res) {
+        if (!req.body.username) return res.status(400).json({ message: 'Username is required' });
         
-    //     const user = { user_id: req.params.user_id,  username: stripTags(req.body.username) };
+        const user = { user_id: req.params.user_id,  username: stripTags(req.body.username) };
         
-    //     const userModel = new User2();
-    //     try {
-    //         const result = await userModel.updateUsername(user);
-    //         return res.json({ message: result });
-    //     } catch (err) {
-    //         return res.status(500).json({ error_message: err });
-    //     }
-    // }
+        const userModel = new User2();
+        try {
+            const result = await userModel.updateUsername(user);
+            return res.json({ message: result });
+        } catch (err) {
+            return res.status(500).json({ error_message: err });
+        }
+    }
 }
 
 module.exports =  new UserController();
