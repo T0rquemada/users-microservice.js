@@ -28,7 +28,7 @@ class Database {
 
   async find(Model, query) {
     try {
-      const result = await Model.find(query);
+      const result = await Model.findOne(query);
       return result;
     } catch (err) {
       console.error('Find operation failed:', err);
