@@ -46,12 +46,16 @@ class Database {
     }
   }
 
-  async update(Model, id, data) {
+  async updateUsername(Model, id, newUsername) {
     try {
-      const result = await Model.findByIdAndUpdate(id, data, { new: true });
+      const result = await Model.findByIdAndUpdate(
+        id,
+        { username: newUsername }, 
+        { new: true } 
+      );
       return result;
     } catch (err) {
-      console.error('Update operation failed:', err);
+      console.error('UpdateUsername operation failed:', err);
       throw err;
     }
   }

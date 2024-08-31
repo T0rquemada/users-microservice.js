@@ -7,6 +7,6 @@ router.post('/register', UserController.create);
 router.post('/login', UserController.login);
 router.get('/login_jwt', UserController.loginJWT);
 router.delete('/delete', UserController.delete);
-// router.put('/:user_id', UserController.update);
+router.put('/update_username', UserController.updateUsername);
 
 module.exports = router;

@@ -89,7 +89,7 @@ class UserController {
             }
 
             if (!decoded.password || !decoded.email) {
-                return res.status(400).json({ success: false, message: 'Invalid token: email or password not provided' });
+                return res.status(400).json({ success: false, message: 'Invalid userdata: email or password not provided' });
             }
 
             let result = await db.findById(User, decoded.user_id);
@@ -161,14 +161,31 @@ class UserController {
       }
 
     async updateUsername(req, res) {
-        if (!req.body.username) return res.status(400).json({ message: 'Username is required' });
-        
-        const user = { user_id: req.params.user_id,  username: stripTags(req.body.username) };
-        
-        const userModel = new User2();
+        const new_username = req.body.new_username;
+
+        if (!new_username) return res.status(400).json({ success: false, message: 'No new username provided!' });
+
+        const authHeader = req.headers['authorization'];
+
+        if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ success: false, message: 'No token provided!' });
+    
+        const token = authHeader.split(' ')[1];
+
         try {
-            const result = await userModel.updateUsername(user);
-            return res.json({ message: result });
+            const decoded = parseJWT(token);
+
+            if (!decoded.user_id) return res.status(400).json({ success: false, message: 'Invalid token: user_id not provided' });
+            if (!decoded.password) return res.status(400).json({ success: false, message: 'Invalid userdata: password not provided' });
+
+            let result = await db.findById(User, decoded.user_id);
+            if (!result) return res.status(400).json({ success: false, message: 'User not found!' });
+
+            let isMatch = await bcrypt.compare(decoded.password, result.password);
+            if (!isMatch) return res.status(401).json({ success: false, message: 'Password does not match' });
+
+            await db.updateUsername(User, decoded.user_id, new_username);
+
+            return res.status(200).json({ success: true, message: 'Username updated successful!' });
         } catch (err) {
             return res.status(500).json({ error_message: err });
         }
