@@ -34,8 +34,8 @@ Microservice for handling actions with users on [Express.js](https://expressjs.c
 - ```http://localhost:3006/users/login_jwt```
 - Method: **GET**
 - Request headers must contain key-value pair:
- - Key: Authorization
- - Value: `Bearer ${JWT}`
+    - Key: Authorization
+    - Value: `Bearer ${JWT}`
 - Response
     1. "success" (boolean value)
     2. "message"
@@ -44,15 +44,15 @@ Microservice for handling actions with users on [Express.js](https://expressjs.c
 - ```http://localhost:3006/users/delete```
 - Method: **DELETE**
 - Request headers must contain key-value pair:
- - Key: Authorization
- - Value: `Bearer ${JWT}`
+    - Key: Authorization
+    - Value: `Bearer ${JWT}`
 
   ## Update username
 - ```http://localhost:3006/users/login_jwt```
 - Method: **PUT**
 - Request headers must contain key-value pair:
- - Key: Authorization
- - Value: `Bearer ${JWT}`
+    - Key: Authorization
+    - Value: `Bearer ${JWT}`
 - Request body: 
     1. new_username
 - Response
